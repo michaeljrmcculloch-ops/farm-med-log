@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MedLog">
+<meta name="theme-color" content="#1a3a2a">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Farm Medicine Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --green-dark: #1a3a2a;
+  --green-mid: #1D9E75;
+  --green-light: #e1f5ee;
+  --green-pale: #f0faf5;
+  --amber: #d97706;
+  --amber-light: #fef3c7;
+  --red: #dc2626;
+  --red-light: #fee2e2;
+  --text: #111;
+  --text-muted: #6b7280;
+  --text-faint: #9ca3af;
+  --border: #e5e7eb;
+  --surface: #fff;
+  --bg: #f6f8f7;
+  --radius: 10px;
+  --radius-lg: 14px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+
+/* Layout */
+#app{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+.screen{display:none;flex:1;overflow-y:auto;padding:16px 16px 120px}
+.screen.active{display:block}
+
+/* Header */
+.header{background:var(--green-dark);color:#fff;padding:14px 16px 12px;padding-top:max(14px, env(safe-area-inset-top));display:flex;align-items:center;gap:10px;flex-shrink:0}
+.header h1{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;letter-spacing:0.02em;flex:1}
+.header-sub{font-size:11px;opacity:0.6;font-family:'IBM Plex Mono',monospace}
+
+/* Bottom nav */
+.bottom-nav{background:var(--surface);border-top:1px solid var(--border);display:flex;flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0 12px;cursor:pointer;font-size:10px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.03em;border:none;background:none}
+.nav-item.active{color:var(--green-mid)}
+.nav-icon{width:22px;height:22px}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 16px;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-family:'IBM Plex Sans',sans-serif;cursor:pointer;font-weight:500;transition:background 0.1s}
+.btn:active{background:#f3f4f6}
+.btn-primary{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+.btn-primary:active{background:#142d21}
+.btn-export{background:var(--green-light);border-color:var(--green-mid);color:var(--green-dark)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-block{width:100%}
+
+/* Form */
+.form-group{margin-bottom:12px}
+.form-label{font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--text-muted);letter-spacing:0.04em;margin-bottom:4px;display:block;text-transform:uppercase}
+input,select,textarea{width:100%;padding:10px 12px;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-family:'IBM Plex Sans',sans-serif;outline:none;appearance:none;-webkit-appearance:none}
+input:focus,select:focus,textarea:focus{border-color:var(--green-mid)}
+textarea{resize:none}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:13px 14px;margin-bottom:8px}
+.card-tap{cursor:pointer;transition:background 0.1s}
+.card-tap:active{background:#f9fafb}
+
+/* Tags */
+.species-tag{font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:500;padding:2px 7px;border-radius:4px;letter-spacing:0.03em}
+.st-cattle{background:#dbeafe;color:#1e40af}
+.st-sheep{background:#ede9fe;color:#5b21b6}
+.st-pigs{background:#fef3c7;color:#92400e}
+.st-poultry{background:#fce7f3;color:#9d174d}
+
+.badge{font-size:10px;font-family:'IBM Plex Mono',monospace;font-weight:500;padding:2px 8px;border-radius:4px}
+.badge-warn{background:var(--amber-light);color:var(--amber)}
+.badge-ok{background:var(--green-light);color:#065f46}
+.badge-clear{background:#f3f4f6;color:var(--text-muted)}
+
+/* Section label */
+.section-label{font-size:10px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-faint);margin:16px 0 8px}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat-card{background:var(--green-pale);border:1px solid #c6e8d7;border-radius:var(--radius);padding:10px 12px}
+.stat-val{font-size:20px;font-weight:600;font-family:'IBM Plex Mono',monospace;color:var(--green-dark)}
+.stat-lbl{font-size:10px;color:var(--text-muted);margin-top:2px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.03em}
+
+/* Search */
+.search-wrap{position:relative;margin-bottom:12px}
+.search-wrap input{padding-left:36px}
+.search-ico{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-faint)}
+
+/* Filter tabs */
+.filter-tabs{display:flex;gap:6px;margin-bottom:12px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.filter-tabs::-webkit-scrollbar{display:none}
+.ftab{flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:12px;font-family:'IBM Plex Mono',monospace;border:1px solid var(--border);background:var(--surface);color:var(--text-muted);cursor:pointer}
+.ftab.active{background:var(--green-dark);border-color:var(--green-dark);color:#fff}
+
+/* Withdrawal warning */
+.wdr-banner{background:var(--amber-light);border:1px solid #fcd34d;border-radius:var(--radius);padding:9px 12px;margin-bottom:10px;font-size:12px;color:#78350f;font-family:'IBM Plex Mono',monospace}
+
+/* Med row */
+.med-row{padding:10px 0;border-bottom:1px solid var(--border)}
+.med-row:last-child{border-bottom:none}
+.med-name{font-weight:600;font-size:14px;color:var(--text)}
+.med-meta{font-size:12px;color:var(--text-muted);margin-top:3px;font-family:'IBM Plex Mono',monospace}
+.med-notes{font-size:12px;color:var(--text-muted);margin-top:4px;font-style:italic}
+
+/* Back button */
+.back-btn{display:flex;align-items:center;gap:5px;font-size:13px;color:var(--green-mid);cursor:pointer;background:none;border:none;font-family:'IBM Plex Sans',sans-serif;font-weight:500;padding:0 0 14px 0}
+
+/* Empty */
+.empty{text-align:center;padding:40px 16px;color:var(--text-faint);font-size:13px;font-family:'IBM Plex Mono',monospace;line-height:1.8}
+
+/* Page title */
+.page-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:14px}
+
+/* Animal header */
+.animal-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.animal-icon{width:44px;height:44px;border-radius:50%;background:var(--green-light);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+
+/* Export section */
+.export-card{background:var(--green-pale);border:1px solid #c6e8d7;border-radius:var(--radius-lg);padding:14px;margin-bottom:12px}
+.export-title{font-weight:600;font-size:14px;color:var(--green-dark);margin-bottom:4px}
+.export-desc{font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.5}
+
+/* Toast */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--green-dark);color:#fff;font-size:12px;font-family:'IBM Plex Mono',monospace;padding:8px 16px;border-radius:20px;z-index:100;opacity:0;transition:opacity 0.2s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* Confirm dialog */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.overlay.show{display:flex}
+.dialog{background:var(--surface);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:20px 16px 32px;width:100%;max-width:480px}
+.dialog h3{font-size:16px;font-weight:600;margin-bottom:6px}
+.dialog p{font-size:13px;color:var(--text-muted);margin-bottom:16px}
+.dialog-btns{display:flex;gap:8px}
+.btn-danger{background:#fee2e2;border-color:#fca5a5;color:var(--red)}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Header -->
+  <div class="header">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2C8 2 4 5 4 9c0 5 8 13 8 13s8-8 8-13c0-4-3.6-7-8-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
+    <div><div class="header h1" style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;letter-spacing:0.02em">FARM MEDICINE LOG</div><div class="header-sub" id="header-sub">Loading...</div></div>
+  </div>
+
+  <!-- Screens -->
+
+  <!-- HOME -->
+  <div id="screen-home" class="screen active">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="page-title" style="margin:0">Animals</div>
+      <button class="btn btn-sm btn-primary" onclick="goTo('screen-add-animal')">+ Add animal</button>
+    </div>
+    <div class="filter-tabs">
+      <button class="ftab active" onclick="setFilter('all',this)">All</button>
+      <button class="ftab" onclick="setFilter('cattle',this)">Cattle</button>
+      <button class="ftab" onclick="setFilter('sheep',this)">Sheep</button>
+      <button class="ftab" onclick="setFilter('pigs',this)">Pigs</button>
+      <button class="ftab" onclick="setFilter('poultry',this)">Poultry</button>
+    </div>
+    <div class="search-wrap">
+      <svg class="search-ico" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4"/><line x1="10" y1="10" x2="14" y2="14"/></svg>
+      <input type="text" placeholder="Search tag or name..." id="search-input" oninput="renderAnimals()">
+    </div>
+    <div id="animal-list"></div>
+  </div>
+
+  <!-- ANIMAL DETAIL -->
+  <div id="screen-animal" class="screen">
+    <button class="back-btn" onclick="goTo('screen-home')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="10,3 4,8 10,13"/></svg>
+      Back
+    </button>
+    <div id="animal-detail"></div>
+    <div class="section-label">Medicine records</div>
+    <div id="med-list"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="openAddMed()">+ Add medicine record</button>
+  </div>
+
+  <!-- ADD ANIMAL -->
+  <div id="screen-add-animal" class="screen">
+    <button class="back-btn" onclick="goTo('screen-home')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="10,3 4,8 10,13"/></svg>
+      Back
+    </button>
+    <div class="page-title">Add animal</div>
+    <div class="form-group"><label class="form-label">Species</label>
+      <select id="a-species"><option value="cattle">Cattle</option><option value="sheep">Sheep</option><option value="pigs">Pigs</option><option value="poultry">Poultry</option></select></div>
+    <div class="form-group"><label class="form-label">Ear tag number *</label>
+      <input type="text" id="a-tag" placeholder="e.g. UK123456 0001"></div>
+    <div class="form-group"><label class="form-label">Name (optional)</label>
+      <input type="text" id="a-name" placeholder="e.g. Bessie"></div>
+    <div class="form-group"><label class="form-label">Breed (optional)</label>
+      <input type="text" id="a-breed" placeholder="e.g. Aberdeen Angus"></div>
+    <div class="form-group"><label class="form-label">Date of birth (optional)</label>
+      <input type="date" id="a-dob"></div>
+    <button class="btn btn-primary btn-block" style="margin-top:4px" onclick="saveAnimal()">Save animal</button>
+  </div>
+
+  <!-- ADD MEDICINE -->
+  <div id="screen-add-med" class="screen">
+    <button class="back-btn" onclick="goTo('screen-animal')">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="10,3 4,8 10,13"/></svg>
+      Back
+    </button>
+    <div class="page-title">Add medicine record</div>
+    <div class="form-group"><label class="form-label">Medicine name *</label>
+      <input type="text" id="m-name" placeholder="e.g. Alamycin LA"></div>
+    <div class="form-group"><label class="form-label">Date administered *</label>
+      <input type="date" id="m-date"></div>
+    <div class="form-group"><label class="form-label">Dose</label>
+      <input type="text" id="m-dose" placeholder="e.g. 10ml"></div>
+    <div class="form-group"><label class="form-label">Route</label>
+      <select id="m-route"><option>IM injection</option><option>SC injection</option><option>IV injection</option><option>Oral</option><option>Topical</option><option>Pour-on</option><option>Other</option></select></div>
+    <div class="form-group"><label class="form-label">Withdrawal period (days)</label>
+      <input type="number" id="m-wdr" placeholder="e.g. 28" min="0"></div>
+    <div class="form-group"><label class="form-label">Administered by</label>
+      <input type="text" id="m-by" placeholder="e.g. John / Vet name"></div>
+    <div class="form-group"><label class="form-label">Batch / licence number</label>
+      <input type="text" id="m-batch" placeholder="e.g. BCH-2024-001"></div>
+    <div class="form-group"><label class="form-label">Condition treated / notes</label>
+      <textarea id="m-notes" rows="2" placeholder="e.g. Pneumonia, rear left leg wound..."></textarea></div>
+    <button class="btn btn-primary btn-block" onclick="saveMed()">Save record</button>
+  </div>
+
+  <!-- EXPORT / RECORDS -->
+  <div id="screen-export" class="screen">
+    <div class="page-title">Export records</div>
+    <div class="export-card">
+      <div class="export-title">Full medicine log</div>
+      <div class="export-desc">All animals and every medicine record — one row per treatment. Opens directly in Excel or Numbers.</div>
+      <button class="btn btn-export btn-block" onclick="exportFull()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1v8M4 6l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2"/></svg>
+        Download full log (.xlsx)
+      </button>
+    </div>
+    <div class="export-card">
+      <div class="export-title">Active withdrawal periods</div>
+      <div class="export-desc">Only animals currently in a withdrawal period, with days remaining.</div>
+      <button class="btn btn-export btn-block" onclick="exportWithdrawal()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1v8M4 6l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2"/></svg>
+        Download withdrawal report (.xlsx)
+      </button>
+    </div>
+    <div class="export-card">
+      <div class="export-title">Export by species</div>
+      <div class="export-desc">One sheet per species — useful for vet visits or herd health reviews.</div>
+      <button class="btn btn-export btn-block" onclick="exportBySpecies()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 1v8M4 6l3 3 3-3M2 10v2a1 1 0 001 1h8a1 1 0 001-1v-2"/></svg>
+        Download by species (.xlsx)
+      </button>
+    </div>
+    <div class="section-label">Summary</div>
+    <div class="stats-grid" id="export-stats"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="screen-settings" class="screen">
+    <div class="page-title">Settings</div>
+    <div class="section-label">Farm details</div>
+    <div class="form-group"><label class="form-label">Farm name</label>
+      <input type="text" id="s-farm" placeholder="e.g. Hillside Farm"></div>
+    <div class="form-group"><label class="form-label">CPH number</label>
+      <input type="text" id="s-cph" placeholder="e.g. 12/345/6789"></div>
+    <div class="form-group"><label class="form-label">Vet practice name</label>
+      <input type="text" id="s-vet" placeholder="e.g. Grampian Vets"></div>
+    <div class="form-group"><label class="form-label">Vet phone</label>
+      <input type="tel" id="s-vettel" placeholder="e.g. 01224 000000"></div>
+    <button class="btn btn-primary btn-block" onclick="saveSettings()">Save settings</button>
+    <div class="section-label" style="margin-top:24px">Data</div>
+    <div class="card" style="font-size:12px;color:var(--text-muted);line-height:1.7;font-family:'IBM Plex Mono',monospace">
+      All data is stored locally on this device.<br>
+      Use the Export tab to back up records.<br>
+      This app does not send data anywhere.
+    </div>
+    <button class="btn btn-block" style="margin-top:10px;border-color:#fca5a5;color:var(--red)" onclick="confirmClear()">Clear all data</button>
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="bottom-nav">
+    <button class="nav-item active" id="nav-home" onclick="navTo('home')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      Animals
+    </button>
+    <button class="nav-item" id="nav-export" onclick="navTo('export')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Export
+    </button>
+    <button class="nav-item" id="nav-settings" onclick="navTo('settings')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      Settings
+    </button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Confirm dialog -->
+<div class="overlay" id="overlay">
+  <div class="dialog">
+    <h3 id="dialog-title">Are you sure?</h3>
+    <p id="dialog-msg">This cannot be undone.</p>
+    <div class="dialog-btns">
+      <button class="btn" style="flex:1" onclick="closeDialog()">Cancel</button>
+      <button class="btn btn-danger" style="flex:1" id="dialog-confirm">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ─── Data ───────────────────────────────────────────
+let animals = [], meds = [], settings = {}, currentAnimalId = null, filterSpecies = 'all';
+
+function load() {
+  try { animals = JSON.parse(localStorage.getItem('fm_animals') || '[]'); } catch(e) { animals = []; }
+  try { meds = JSON.parse(localStorage.getItem('fm_meds') || '[]'); } catch(e) { meds = []; }
+  try { settings = JSON.parse(localStorage.getItem('fm_settings') || '{}'); } catch(e) { settings = {}; }
+}
+function save() {
+  localStorage.setItem('fm_animals', JSON.stringify(animals));
+  localStorage.setItem('fm_meds', JSON.stringify(meds));
+}
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// ─── Navigation ─────────────────────────────────────
+function goTo(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id.replace('screen-','')).classList.add('active');
+  if (id === 'screen-home' || id === 'home') renderAnimals();
+  if (id === 'screen-animal') renderAnimalDetail();
+  if (id === 'screen-export' || id === 'export') renderExportStats();
+}
+function navTo(tab) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-' + tab).classList.add('active');
+  if (tab === 'home') goTo('screen-home');
+  else if (tab === 'export') goTo('screen-export');
+  else if (tab === 'settings') { loadSettings(); goTo('screen-settings'); }
+}
+
+// ─── Helpers ────────────────────────────────────────
+function fmtDate(d) {
+  if (!d) return '—';
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+function isInWdr(med) {
+  if (!med.wdr || !med.date) return false;
+  const end = new Date(med.date);
+  end.setDate(end.getDate() + parseInt(med.wdr));
+  return new Date() <= end;
+}
+function wdrDaysLeft(med) {
+  if (!med.wdr || !med.date) return 0;
+  const end = new Date(med.date);
+  end.setDate(end.getDate() + parseInt(med.wdr));
+  return Math.max(0, Math.ceil((end - new Date()) / 86400000));
+}
+function speciesIcon(s) {
+  return { cattle: '🐄', sheep: '🐑', pigs: '🐷', poultry: '🐔' }[s] || '🐾';
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+function updateHeader() {
+  const total = animals.length;
+  const wdrCount = meds.filter(m => isInWdr(m)).length;
+  let sub = `${total} animal${total !== 1 ? 's' : ''}`;
+  if (wdrCount > 0) sub += ` · ${wdrCount} in withdrawal`;
+  document.getElementById('header-sub').textContent = sub;
+}
+
+// ─── Animals ────────────────────────────────────────
+function setFilter(sp, el) {
+  filterSpecies = sp;
+  document.querySelectorAll('.ftab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderAnimals();
+}
+function renderAnimals() {
+  updateHeader();
+  const q = (document.getElementById('search-input').value || '').toLowerCase();
+  let list = animals.filter(a => {
+    if (filterSpecies !== 'all' && a.species !== filterSpecies) return false;
+    if (q && !a.tag.toLowerCase().includes(q) && !(a.name || '').toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const el = document.getElementById('animal-list');
+  if (!list.length) {
+    el.innerHTML = animals.length === 0
+      ? '<div class="empty">No animals added yet.<br>Tap "+ Add animal" to get started.</div>'
+      : '<div class="empty">No animals match your search.</div>';
+    return;
+  }
+  el.innerHTML = list.map(a => {
+    const aM = meds.filter(m => m.animalId === a.id).sort((x,y) => new Date(y.date) - new Date(x.date));
+    const last = aM[0];
+    const wdr = last && isInWdr(last);
+    const days = wdr ? wdrDaysLeft(last) : 0;
+    return `<div class="card card-tap" onclick="openAnimal('${a.id}')">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="font-size:22px">${speciesIcon(a.species)}</span>
+          <div>
+            <div style="font-size:14px;font-weight:600;color:var(--text)">${a.tag}${a.name ? ' · ' + a.name : ''}</div>
+            <span class="species-tag st-${a.species}">${a.species}</span>${a.breed ? `<span style="font-size:11px;color:var(--text-faint);margin-left:5px">${a.breed}</span>` : ''}
+          </div>
+        </div>
+        ${wdr ? `<span class="badge badge-warn">${days}d WDR</span>` : ''}
+      </div>
+      <div style="font-size:11px;color:var(--text-faint);margin-top:7px;font-family:'IBM Plex Mono',monospace">
+        ${aM.length} record${aM.length !== 1 ? 's' : ''} · ${last ? 'Last: ' + fmtDate(last.date) : 'No records yet'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openAnimal(id) {
+  currentAnimalId = id;
+  goTo('screen-animal');
+}
+
+function renderAnimalDetail() {
+  const a = animals.find(x => x.id === currentAnimalId);
+  if (!a) return;
+  const aM = meds.filter(m => m.animalId === a.id).sort((x,y) => new Date(y.date) - new Date(x.date));
+  const last = aM[0];
+  const wdrActive = last && isInWdr(last);
+  const days = wdrActive ? wdrDaysLeft(last) : 0;
+
+  document.getElementById('animal-detail').innerHTML = `
+    <div class="card">
+      <div class="animal-header">
+        <div class="animal-icon">${speciesIcon(a.species)}</div>
+        <div style="flex:1">
+          <div style="font-size:17px;font-weight:600">${a.tag}${a.name ? ' · ' + a.name : ''}</div>
+          <span class="species-tag st-${a.species}">${a.species}</span>
+          ${a.breed ? `<span style="font-size:12px;color:var(--text-muted);margin-left:6px">${a.breed}</span>` : ''}
+          ${a.dob ? `<div style="font-size:11px;color:var(--text-faint);margin-top:3px;font-family:'IBM Plex Mono',monospace">DOB: ${fmtDate(a.dob)}</div>` : ''}
+        </div>
+      </div>
+      ${wdrActive ? `<div class="wdr-banner">⚠ Withdrawal active — ${days} day${days !== 1 ? 's' : ''} remaining (${last.name})</div>` : ''}
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-val">${aM.length}</div><div class="stat-lbl">Total records</div></div>
+        <div class="stat-card"><div class="stat-val">${last ? fmtDate(last.date) : '—'}</div><div class="stat-lbl">Last treated</div></div>
+      </div>
+    </div>`;
+
+  const ml = document.getElementById('med-list');
+  if (!aM.length) { ml.innerHTML = '<div class="empty">No medicine records yet.</div>'; return; }
+  ml.innerHTML = aM.map(m => {
+    const inWdr = m.wdr ? isInWdr(m) : false;
+    const dl = inWdr ? wdrDaysLeft(m) : 0;
+    return `<div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div class="med-name">${m.name}</div>
+        ${inWdr ? `<span class="badge badge-warn">${dl}d left</span>` : (m.wdr ? '<span class="badge badge-ok">Clear</span>' : '')}
+      </div>
+      <div class="med-meta">${fmtDate(m.date)}${m.dose ? ' · ' + m.dose : ''} · ${m.route}</div>
+      ${m.by ? `<div class="med-meta">By: ${m.by}</div>` : ''}
+      ${m.batch ? `<div class="med-meta">Batch: ${m.batch}</div>` : ''}
+      ${m.wdr ? `<div class="med-meta">WDR: ${m.wdr} days</div>` : ''}
+      ${m.notes ? `<div class="med-notes">${m.notes}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function saveAnimal() {
+  const tag = document.getElementById('a-tag').value.trim();
+  if (!tag) { toast('Please enter an ear tag number'); return; }
+  animals.push({
+    id: uid(), species: document.getElementById('a-species').value,
+    tag, name: document.getElementById('a-name').value.trim(),
+    breed: document.getElementById('a-breed').value.trim(),
+    dob: document.getElementById('a-dob').value
+  });
+  save();
+  ['a-tag','a-name','a-breed','a-dob'].forEach(id => document.getElementById(id).value = '');
+  toast('Animal saved');
+  goTo('screen-home');
+}
+
+// ─── Medicine ────────────────────────────────────────
+function openAddMed() {
+  document.getElementById('m-date').value = new Date().toISOString().split('T')[0];
+  ['m-name','m-dose','m-wdr','m-by','m-batch','m-notes'].forEach(id => document.getElementById(id).value = '');
+  goTo('screen-add-med');
+}
+function saveMed() {
+  const name = document.getElementById('m-name').value.trim();
+  const date = document.getElementById('m-date').value;
+  if (!name || !date) { toast('Please enter medicine name and date'); return; }
+  meds.push({
+    id: uid(), animalId: currentAnimalId,
+    name, date, dose: document.getElementById('m-dose').value.trim(),
+    route: document.getElementById('m-route').value,
+    wdr: document.getElementById('m-wdr').value,
+    by: document.getElementById('m-by').value.trim(),
+    batch: document.getElementById('m-batch').value.trim(),
+    notes: document.getElementById('m-notes').value.trim()
+  });
+  save();
+  toast('Record saved');
+  goTo('screen-animal');
+}
+
+// ─── Export ──────────────────────────────────────────
+function getMedRows(filterFn) {
+  return meds.filter(filterFn || (() => true)).map(m => {
+    const a = animals.find(x => x.id === m.animalId) || {};
+    const wdrActive = m.wdr ? isInWdr(m) : false;
+    const daysLeft = wdrActive ? wdrDaysLeft(m) : 0;
+    return {
+      'Date': m.date, 'Species': a.species || '', 'Ear Tag': a.tag || '',
+      'Name': a.name || '', 'Breed': a.breed || '', 'Medicine': m.name,
+      'Dose': m.dose, 'Route': m.route, 'Withdrawal (days)': m.wdr,
+      'Withdrawal Active': wdrActive ? 'YES' : 'No',
+      'Days Remaining': wdrActive ? daysLeft : '',
+      'Administered By': m.by, 'Batch / Licence': m.batch, 'Notes': m.notes
+    };
+  });
+}
+function exportFull() {
+  const rows = getMedRows();
+  if (!rows.length) { toast('No records to export'); return; }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'All Records');
+  XLSX.writeFile(wb, `FarmMedLog_${today()}.xlsx`);
+  toast('Downloading full log...');
+}
+function exportWithdrawal() {
+  const rows = getMedRows(m => isInWdr(m));
+  if (!rows.length) { toast('No active withdrawals'); return; }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Active Withdrawals');
+  XLSX.writeFile(wb, `Withdrawals_${today()}.xlsx`);
+  toast('Downloading withdrawal report...');
+}
+function exportBySpecies() {
+  const species = ['cattle','sheep','pigs','poultry'];
+  const wb = XLSX.utils.book_new();
+  let hasData = false;
+  species.forEach(sp => {
+    const rows = getMedRows(m => {
+      const a = animals.find(x => x.id === m.animalId);
+      return a && a.species === sp;
+    });
+    if (rows.length) {
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sp.charAt(0).toUpperCase()+sp.slice(1));
+      hasData = true;
+    }
+  });
+  if (!hasData) { toast('No records to export'); return; }
+  XLSX.writeFile(wb, `FarmMedLog_BySpecies_${today()}.xlsx`);
+  toast('Downloading by species...');
+}
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function renderExportStats() {
+  const wdrActive = meds.filter(m => isInWdr(m)).length;
+  const el = document.getElementById('export-stats');
+  el.innerHTML = `
+    <div class="stat-card"><div class="stat-val">${animals.length}</div><div class="stat-lbl">Animals</div></div>
+    <div class="stat-card"><div class="stat-val">${meds.length}</div><div class="stat-lbl">Records</div></div>
+    <div class="stat-card"><div class="stat-val">${wdrActive}</div><div class="stat-lbl">In withdrawal</div></div>
+    <div class="stat-card"><div class="stat-val">${[...new Set(meds.map(m=>m.name))].length}</div><div class="stat-lbl">Medicines used</div></div>`;
+}
+
+// ─── Settings ────────────────────────────────────────
+function loadSettings() {
+  document.getElementById('s-farm').value = settings.farm || '';
+  document.getElementById('s-cph').value = settings.cph || '';
+  document.getElementById('s-vet').value = settings.vet || '';
+  document.getElementById('s-vettel').value = settings.vettel || '';
+}
+function saveSettings() {
+  settings = {
+    farm: document.getElementById('s-farm').value.trim(),
+    cph: document.getElementById('s-cph').value.trim(),
+    vet: document.getElementById('s-vet').value.trim(),
+    vettel: document.getElementById('s-vettel').value.trim()
+  };
+  localStorage.setItem('fm_settings', JSON.stringify(settings));
+  toast('Settings saved');
+}
+
+// ─── Confirm dialog ──────────────────────────────────
+let dialogAction = null;
+function confirmClear() {
+  document.getElementById('dialog-title').textContent = 'Clear all data?';
+  document.getElementById('dialog-msg').textContent = 'This will permanently delete all animals and medicine records. Export first if you need a backup.';
+  document.getElementById('dialog-confirm').textContent = 'Clear all data';
+  dialogAction = () => { animals=[]; meds=[]; save(); toast('All data cleared'); closeDialog(); renderAnimals(); };
+  document.getElementById('overlay').classList.add('show');
+}
+function closeDialog() { document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('dialog-confirm').onclick = () => dialogAction && dialogAction();
+document.getElementById('overlay').onclick = e => { if (e.target === document.getElementById('overlay')) closeDialog(); };
+
+// ─── Init ────────────────────────────────────────────
+load();
+renderAnimals();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
